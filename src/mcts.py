@@ -12,7 +12,7 @@ class MCTSNode:
     def __init__(self, board, parent=None, move=None, player_just_moved=None):
         self.board = board
         self.parent = parent
-        self.move = move  # Columna que se jugó para llegar hasta este estado
+        self.move = move
         self.player_just_moved = player_just_moved
         self.children = []
         self.untried_moves = board.get_valid_moves()
@@ -26,7 +26,7 @@ class MCTSNode:
         return self.board.is_terminal()
 
     def best_child_ucb(self, c_param):
-        # Fórmula UCB1: equilibra aprovechar jugadas ganadoras y explorar ramas poco probadas
+        # UCB1 balances exploitation (win ratio) and exploration (less visited nodes)
         best_score = -float("inf")
         best_children = []
 
@@ -44,7 +44,6 @@ class MCTSNode:
         return random.choice(best_children)
 
     def expand(self):
-        # Cogemos al azar una columna que aún no se haya probado desde aquí y creamos su nodo hijo
         move = self.untried_moves.pop(random.randrange(len(self.untried_moves)))
         next_board = self.board.clone()
         mover = next_board.current_player
@@ -80,27 +79,26 @@ class MCTS:
         for _ in range(self.simulations):
             node = root
 
-            # 1. Selección: bajamos por el árbol con UCB1 mientras todas las jugadas estén ya abiertas
+            # 1. Selection
             while not node.is_terminal() and node.is_fully_expanded():
                 node = node.best_child_ucb(self.exploration_constant)
 
-            # 2. Expansión: si la partida sigue viva y quedan columnas por probar, abrimos una rama nueva
+            # 2. Expansion
             if not node.is_terminal() and not node.is_fully_expanded():
                 node = node.expand()
                 nodes_created += 1
 
-            # 3. Simulación (Rollout): jugamos fichas al azar hasta que gane alguien o haya empate
+            # 3. Simulation (random rollout)
             winner = self._simulate_random_playout(node.board)
 
-            # 4. Retropropagación: subimos hasta la raíz sumando visitas y victorias
+            # 4. Backpropagation
             self._backpropagate(node, winner)
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
 
-        # Al acabar todas las simulaciones, nos quedamos con la columna más visitada
+        # Pick the most visited child (robust child criterion)
         best_child = max(root.children, key=lambda c: c.visits)
 
-        # Guardamos los datos de cada columna para mostrarlos en la interfaz y en las gráficas
         column_stats = {}
         for child in root.children:
             win_rate = (child.wins / child.visits) * 100.0 if child.visits > 0 else 0.0
@@ -134,24 +132,23 @@ class MCTS:
             if winner == 0:
                 node.wins += 0.5
             elif node.player_just_moved == winner:
-                # Cada nodo guarda victorias desde el punto de vista del jugador que hizo esa jugada
+                # Track wins from the perspective of the player who made the move into this node
                 node.wins += 1.0
             node = node.parent
 
 
 if __name__ == "__main__":
-    # Prueba rápida: el jugador 1 tiene 3 fichas seguidas abajo (cols 0, 1, 2) y la IA debe tapar en la 3
     board = Connect4Board()
     for col in [0, 6, 1, 6, 2]:
         board.make_move(col)
 
-    print("Tablero antes de pensar la IA:")
+    print("Board state before AI move:")
     print(board)
 
     ai = MCTS(simulations=600)
     move, stats = ai.search(board)
-    print(f"\nColumna elegida por MCTS: {move} (debería ser 3 para bloquear)")
-    print(f"Tiempo: {stats['elapsed_time_ms']} ms | Nodos creados: {stats['nodes_created']}")
+    print(f"\nChosen column: {move} (expected 3 to block)")
+    print(f"Time: {stats['elapsed_time_ms']} ms | Nodes created: {stats['nodes_created']}")
     for col in sorted(stats["column_stats"]):
         info = stats["column_stats"][col]
-        print(f"  Col {col}: {info['visits']} visitas | {info['win_rate']}% victoria")
+        print(f"  Col {col}: {info['visits']} visits | {info['win_rate']}% win rate")

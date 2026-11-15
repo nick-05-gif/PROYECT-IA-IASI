@@ -10,8 +10,6 @@ except ImportError:
 
 
 class RandomAgent:
-    """Agente base que tira al azar. Sirve como referencia para medir cuánto mejora MCTS."""
-
     def __init__(self):
         self.name = "Random"
 
@@ -23,8 +21,6 @@ class RandomAgent:
 
 
 class MCTSAgent:
-    """Envoltorio para usar MCTS dentro del simulador de partidas."""
-
     def __init__(self, simulations=300, exploration_constant=1.414, label=None):
         self.simulations = simulations
         self.exploration_constant = exploration_constant
@@ -46,10 +42,6 @@ def build_agent(config):
 
 
 def run_matchup(agent_a_cfg, agent_b_cfg, num_games=20, progress_callback=None):
-    """
-    Enfrenta dos configuraciones durante N partidas.
-    Alternamos quién empieza en cada partida porque en Conecta 4 el primer jugador tiene ventaja.
-    """
     agent_a = build_agent(agent_a_cfg)
     agent_b = build_agent(agent_b_cfg)
 
@@ -70,7 +62,7 @@ def run_matchup(agent_a_cfg, agent_b_cfg, num_games=20, progress_callback=None):
     for game_idx in range(num_games):
         board = Connect4Board()
 
-        # En partidas pares empieza A (ficha 1); en impares empieza B (ficha 1)
+        # Alternate first player each game to avoid first-move bias
         if game_idx % 2 == 0:
             p1_agent, p2_agent = agent_a, agent_b
             p1_is_a = True
@@ -121,9 +113,6 @@ def run_matchup(agent_a_cfg, agent_b_cfg, num_games=20, progress_callback=None):
 
 
 def run_simulation_scaling(sim_list, games_per_level=16, c_param=1.414, opponent_cfg=None, progress_callback=None):
-    """
-    Evalúa cómo cambian el % de victorias y el tiempo por jugada al aumentar las simulaciones.
-    """
     if opponent_cfg is None:
         opponent_cfg = {"type": "random"}
 
@@ -157,14 +146,14 @@ def run_simulation_scaling(sim_list, games_per_level=16, c_param=1.414, opponent
 
 
 if __name__ == "__main__":
-    print("Lanzando prueba rápida de escalado de simulaciones (50 vs 250 sims frente a Random)...")
+    print("Running quick scaling test (50 vs 250 sims against Random)...")
     t0 = time.perf_counter()
     scaling = run_simulation_scaling([50, 250], games_per_level=10)
     for row in scaling:
         print(
-            f"Simulaciones: {row['simulations']:>3} | "
-            f"Victorias: {row['win_rate']:>5}% | "
-            f"Tiempo medio/jugada: {row['avg_time_ms']:>6} ms | "
-            f"Nodos medios: {row['avg_nodes']}"
+            f"Simulations: {row['simulations']:>3} | "
+            f"Win rate: {row['win_rate']:>5}% | "
+            f"Avg time/move: {row['avg_time_ms']:>6} ms | "
+            f"Avg nodes: {row['avg_nodes']}"
         )
-    print(f"Prueba completada en {round(time.perf_counter() - t0, 2)} s")
+    print(f"Test finished in {round(time.perf_counter() - t0, 2)} s")

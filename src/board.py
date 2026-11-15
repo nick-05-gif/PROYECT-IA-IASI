@@ -6,16 +6,15 @@ class Connect4Board:
     PLAYER_2 = 2
 
     def __init__(self):
-        # La fila 0 es la de arriba del todo y la 5 la de abajo (como se dibuja en pantalla)
+        # Row 0 is the top row, row 5 is the bottom row
         self.grid = [[self.EMPTY for _ in range(self.COLS)] for _ in range(self.ROWS)]
         self.current_player = self.PLAYER_1
         self.last_move = None
         self.moves_count = 0
-        self.winner = None  # None = en juego, 1 o 2 = ganador, 0 = empate
+        self.winner = None  # None = ongoing, 1 or 2 = winner, 0 = draw
         self.winning_cells = []
 
     def clone(self):
-        # Copia rápida del estado actual para que MCTS simule partidas sin romper la real
         new_board = Connect4Board()
         new_board.grid = [row[:] for row in self.grid]
         new_board.current_player = self.current_player
@@ -26,7 +25,6 @@ class Connect4Board:
         return new_board
 
     def get_valid_moves(self):
-        # Una columna está libre si su casilla superior (fila 0) está vacía
         return [col for col in range(self.COLS) if self.grid[0][col] == self.EMPTY]
 
     def make_move(self, col):
@@ -35,7 +33,7 @@ class Connect4Board:
         if col < 0 or col >= self.COLS or self.grid[0][col] != self.EMPTY:
             return False
 
-        # Buscamos desde abajo hacia arriba dónde cae la ficha por gravedad
+        # Drop the piece to the lowest available row in the selected column
         for row in range(self.ROWS - 1, -1, -1):
             if self.grid[row][col] == self.EMPTY:
                 self.grid[row][col] = self.current_player
@@ -45,7 +43,7 @@ class Connect4Board:
                 if self._check_win(row, col, self.current_player):
                     self.winner = self.current_player
                 elif self.moves_count == self.ROWS * self.COLS:
-                    self.winner = 0  # Tablero lleno sin ganador -> empate
+                    self.winner = 0
                 else:
                     self.current_player = (
                         self.PLAYER_2 if self.current_player == self.PLAYER_1 else self.PLAYER_1
@@ -55,25 +53,23 @@ class Connect4Board:
         return False
 
     def _check_win(self, row, col, player):
-        # Comprobamos solo las 4 direcciones que pasan por la ficha recién puesta
+        # Only check the 4 lines passing through the last placed piece
         directions = [
             (0, 1),   # Horizontal
             (1, 0),   # Vertical
-            (1, 1),   # Diagonal principal (\)
-            (1, -1),  # Diagonal inversa (/)
+            (1, 1),   # Main diagonal
+            (1, -1),  # Anti-diagonal
         ]
 
         for dr, dc in directions:
             connected = [(row, col)]
 
-            # Miramos hacia un lado de la dirección
             r, c = row + dr, col + dc
             while 0 <= r < self.ROWS and 0 <= c < self.COLS and self.grid[r][c] == player:
                 connected.append((r, c))
                 r += dr
                 c += dc
 
-            # Miramos hacia el lado contrario
             r, c = row - dr, col - dc
             while 0 <= r < self.ROWS and 0 <= c < self.COLS and self.grid[r][c] == player:
                 connected.append((r, c))
@@ -98,9 +94,8 @@ class Connect4Board:
 
 
 if __name__ == "__main__":
-    # Prueba rápida en consola para verificar gravedad y detección de victoria
     board = Connect4Board()
     for col in [3, 2, 3, 2, 3, 2, 3]:
         board.make_move(col)
     print(board)
-    print(f"Ganador: {board.winner} | Ficha ganadoras: {board.winning_cells}")
+    print(f"Winner: {board.winner} | Winning cells: {board.winning_cells}")

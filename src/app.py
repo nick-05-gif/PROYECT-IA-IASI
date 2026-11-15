@@ -28,7 +28,7 @@ class Connect4MCTSApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Connect 4 — Herramienta de Experimentación MCTS")
+        self.title("Connect 4 — MCTS Experimentation Tool")
         self.geometry("1420x780")
         self.minsize(1240, 720)
 
@@ -45,37 +45,34 @@ class Connect4MCTSApp(ctk.CTk):
 
         self._build_ui()
         self._draw_board()
-        self._append_log("=== PARTIDA INICIADA ===")
+        self._append_log("=== GAME STARTED ===")
         self._append_log(
-            f"Sale: Humano (Rojo) | Config inicial: N={self.sims_var.get()}, C={self.c_var.get():.2f}"
+            f"First turn: Human (Red) | Initial config: N={self.sims_var.get()}, C={self.c_var.get():.2f}"
         )
 
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(fill="both", expand=True, padx=14, pady=14)
 
-        self.tab_play = self.tabview.add("Tablero e Inspección MCTS")
-        self.tab_lab = self.tabview.add("Laboratorio de Experimentos")
+        self.tab_play = self.tabview.add("Board & MCTS Inspector")
+        self.tab_lab = self.tabview.add("Experimentation Lab")
 
         self._build_play_tab()
         self._build_lab_tab()
 
-    # =========================================================================
-    # PESTAÑA 1: TABLERO + ÚLTIMO TURNO + LOGS RONDA A RONDA
-    # =========================================================================
     def _build_play_tab(self):
         self.tab_play.grid_columnconfigure(0, weight=3)
         self.tab_play.grid_columnconfigure(1, weight=2)
         self.tab_play.grid_columnconfigure(2, weight=2)
         self.tab_play.grid_rowconfigure(0, weight=1)
 
-        # Columna 0: Tablero
+        # Left column: Connect 4 board
         board_container = ctk.CTkFrame(self.tab_play)
         board_container.grid(row=0, column=0, sticky="nsew", padx=(8, 6), pady=8)
 
         self.status_label = ctk.CTkLabel(
             board_container,
-            text="Tu turno (Fichas Rojas) — Haz clic en una columna",
+            text="Your turn (Red) — Click a column",
             font=ctk.CTkFont(size=17, weight="bold"),
         )
         self.status_label.pack(pady=(14, 6))
@@ -92,19 +89,19 @@ class Connect4MCTSApp(ctk.CTk):
         self.board_canvas.bind("<Leave>", self._on_canvas_leave)
         self.board_canvas.bind("<Button-1>", self._on_canvas_click)
 
-        # Columna 1: Controles y telemetría del último movimiento
+        # Middle column: algorithm controls & last turn breakdown
         side_panel = ctk.CTkFrame(self.tab_play)
         side_panel.grid(row=0, column=1, sticky="nsew", padx=6, pady=8)
 
         ctk.CTkLabel(
             side_panel,
-            text="Parámetros del Algoritmo",
+            text="Algorithm Parameters",
             font=ctk.CTkFont(size=15, weight="bold"),
         ).pack(anchor="w", padx=14, pady=(14, 8))
 
         self.sims_var = ctk.IntVar(value=500)
         self.sims_label = ctk.CTkLabel(
-            side_panel, text=f"Simulaciones por turno (N): {self.sims_var.get()}"
+            side_panel, text=f"Simulations per turn (N): {self.sims_var.get()}"
         )
         self.sims_label.pack(anchor="w", padx=14)
 
@@ -120,7 +117,7 @@ class Connect4MCTSApp(ctk.CTk):
 
         self.c_var = ctk.DoubleVar(value=1.41)
         self.c_label = ctk.CTkLabel(
-            side_panel, text=f"Constante de exploración UCB1 (C): {self.c_var.get():.2f}"
+            side_panel, text=f"UCB1 Exploration Constant (C): {self.c_var.get():.2f}"
         )
         self.c_label.pack(anchor="w", padx=14)
 
@@ -134,18 +131,18 @@ class Connect4MCTSApp(ctk.CTk):
         )
         self.c_slider.pack(fill="x", padx=14, pady=(4, 12))
 
-        ctk.CTkLabel(side_panel, text="Orden de salida:").pack(anchor="w", padx=14)
-        self.starter_var = ctk.StringVar(value="Humano empieza (Rojo)")
+        ctk.CTkLabel(side_panel, text="Starting player:").pack(anchor="w", padx=14)
+        self.starter_var = ctk.StringVar(value="Human starts (Red)")
         self.starter_menu = ctk.CTkOptionMenu(
             side_panel,
-            values=["Humano empieza (Rojo)", "IA MCTS empieza (Amarillo)"],
+            values=["Human starts (Red)", "MCTS AI starts (Yellow)"],
             variable=self.starter_var,
         )
         self.starter_menu.pack(fill="x", padx=14, pady=(4, 14))
 
         ctk.CTkButton(
             side_panel,
-            text="Iniciar Nueva Partida",
+            text="Start New Game",
             height=36,
             font=ctk.CTkFont(size=13, weight="bold"),
             command=self._reset_game,
@@ -153,7 +150,7 @@ class Connect4MCTSApp(ctk.CTk):
 
         ctk.CTkLabel(
             side_panel,
-            text="Análisis del Último Turno IA",
+            text="Last AI Turn Analysis",
             font=ctk.CTkFont(size=15, weight="bold"),
         ).pack(anchor="w", padx=14, pady=(4, 6))
 
@@ -162,10 +159,10 @@ class Connect4MCTSApp(ctk.CTk):
         )
         self.telemetry_box.pack(fill="both", expand=True, padx=14, pady=(0, 14))
         self._set_telemetry_text(
-            "Aún no ha jugado la IA.\nHaz tu primer movimiento o inicia una partida con salida de la IA."
+            "No AI moves yet.\nMake your first move or start a game with AI moving first."
         )
 
-        # Columna 2: Historial completo de rondas
+        # Right column: round-by-round history log
         logs_panel = ctk.CTkFrame(self.tab_play)
         logs_panel.grid(row=0, column=2, sticky="nsew", padx=(6, 8), pady=8)
 
@@ -174,13 +171,13 @@ class Connect4MCTSApp(ctk.CTk):
 
         ctk.CTkLabel(
             logs_header,
-            text="Logs por Ronda",
+            text="Round Logs",
             font=ctk.CTkFont(size=15, weight="bold"),
         ).pack(side="left")
 
         ctk.CTkButton(
             logs_header,
-            text="Limpiar",
+            text="Clear",
             width=70,
             height=26,
             fg_color="#3a3f4b",
@@ -195,10 +192,10 @@ class Connect4MCTSApp(ctk.CTk):
         self.logs_box.configure(state="disabled")
 
     def _on_sims_change(self, val):
-        self.sims_label.configure(text=f"Simulaciones por turno (N): {int(val)}")
+        self.sims_label.configure(text=f"Simulations per turn (N): {int(val)}")
 
     def _on_c_change(self, val):
-        self.c_label.configure(text=f"Constante de exploración UCB1 (C): {float(val):.2f}")
+        self.c_label.configure(text=f"UCB1 Exploration Constant (C): {float(val):.2f}")
 
     def _set_telemetry_text(self, text):
         self.telemetry_box.configure(state="normal")
@@ -226,19 +223,19 @@ class Connect4MCTSApp(ctk.CTk):
 
         sims = int(self.sims_var.get())
         c_val = float(self.c_var.get())
-        self._append_log("\n=== NUEVA PARTIDA ===")
+        self._append_log("\n=== NEW GAME ===")
 
-        if self.starter_var.get().startswith("Humano"):
+        if self.starter_var.get().startswith("Human"):
             self.human_player = Connect4Board.PLAYER_1
             self.ai_player = Connect4Board.PLAYER_2
-            self.status_label.configure(text="Tu turno (Fichas Rojas) — Haz clic en una columna")
-            self._set_telemetry_text("Partida reiniciada. Te toca mover primero.")
-            self._append_log(f"Sale: Humano (Rojo) | Params: N={sims}, C={c_val:.2f}")
+            self.status_label.configure(text="Your turn (Red) — Click a column")
+            self._set_telemetry_text("Game reset. Your turn to move first.")
+            self._append_log(f"Starts: Human (Red) | Params: N={sims}, C={c_val:.2f}")
             self._draw_board()
         else:
             self.ai_player = Connect4Board.PLAYER_1
             self.human_player = Connect4Board.PLAYER_2
-            self._append_log(f"Sale: IA MCTS (Amarillo) | Params: N={sims}, C={c_val:.2f}")
+            self._append_log(f"Starts: MCTS AI (Yellow) | Params: N={sims}, C={c_val:.2f}")
             self._draw_board()
             self._trigger_ai_move()
 
@@ -279,8 +276,8 @@ class Connect4MCTSApp(ctk.CTk):
             row, moved_col = self.board.last_move
             round_num = (self.board.moves_count + 1) // 2
             self._append_log(
-                f"[Ronda {round_num:02d} | Jugada {self.board.moves_count:02d}] "
-                f"Humano -> Col {moved_col} (Fila {row})"
+                f"[Round {round_num:02d} | Move {self.board.moves_count:02d}] "
+                f"Human -> Col {moved_col} (Row {row})"
             )
 
             self.hover_col = None
@@ -293,7 +290,7 @@ class Connect4MCTSApp(ctk.CTk):
         self.ai_thinking = True
         sims = int(self.sims_var.get())
         c_val = round(float(self.c_var.get()), 2)
-        self.status_label.configure(text=f"IA MCTS pensando ({sims} simulaciones)...")
+        self.status_label.configure(text=f"MCTS AI thinking ({sims} simulations)...")
 
         board_copy = self.board.clone()
 
@@ -318,25 +315,25 @@ class Connect4MCTSApp(ctk.CTk):
             visits = col_info.get("visits", 0)
 
             self._append_log(
-                f"[Ronda {round_num:02d} | Jugada {self.board.moves_count:02d}] "
-                f"IA MCTS -> Col {moved_col} (Fila {row}) | "
-                f"Win: {win_rate:.1f}% ({visits}/{metrics['simulations']} vis) | "
+                f"[Round {round_num:02d} | Move {self.board.moves_count:02d}] "
+                f"MCTS AI -> Col {moved_col} (Row {row}) | "
+                f"Win: {win_rate:.1f}% ({visits}/{metrics['simulations']} visits) | "
                 f"{metrics['elapsed_time_ms']} ms (N={metrics['simulations']}, C={metrics['exploration_constant']})"
             )
 
         self._draw_board()
         if not self._check_game_over():
-            self.status_label.configure(text="Tu turno (Fichas Rojas) — Haz clic en una columna")
+            self.status_label.configure(text="Your turn (Red) — Click a column")
 
     def _update_telemetry_panel(self, metrics):
         lines = [
-            f"Columna elegida : {metrics['best_move']} (índices 0-6)",
-            f"Tiempo cálculo  : {metrics['elapsed_time_ms']} ms",
-            f"Simulaciones (N): {metrics['simulations']}",
-            f"Constante C     : {metrics['exploration_constant']}",
-            f"Nodos expandidos: {metrics['nodes_created']}",
+            f"Chosen column   : {metrics['best_move']} (0-6)",
+            f"Compute time    : {metrics['elapsed_time_ms']} ms",
+            f"Simulations (N) : {metrics['simulations']}",
+            f"Exploration C   : {metrics['exploration_constant']}",
+            f"Expanded nodes  : {metrics['nodes_created']}",
             "-" * 38,
-            "Col | Visitas | % Victoria",
+            "Col | Visits | Win Rate",
             "-" * 38,
         ]
         col_stats = metrics.get("column_stats", {})
@@ -347,26 +344,26 @@ class Connect4MCTSApp(ctk.CTk):
                 marker = " <--" if c == metrics["best_move"] else ""
                 lines.append(f" {c}  |  {v:>5}  |   {wr:>5.1f}%{marker}")
             else:
-                lines.append(f" {c}  |    -    |   Llena")
+                lines.append(f" {c}  |    -    |   Full")
         self._set_telemetry_text("\n".join(lines))
 
     def _check_game_over(self):
         if not self.board.is_terminal():
             return False
         if self.board.winner == 0:
-            self.status_label.configure(text="¡Empate! Tablero completo sin 4 en raya.")
-            self._append_log(f"--- FIN: Empate tras {self.board.moves_count} jugadas ---")
+            self.status_label.configure(text="Draw! Board is full.")
+            self._append_log(f"--- END: Draw after {self.board.moves_count} moves ---")
         elif self.board.winner == self.human_player:
-            self.status_label.configure(text="¡Has ganado a la IA!")
+            self.status_label.configure(text="You beat the MCTS AI!")
             self._append_log(
-                f"--- FIN: ¡Gana el Humano en {self.board.moves_count} jugadas! "
-                f"Línea: {self.board.winning_cells} ---"
+                f"--- END: Human wins in {self.board.moves_count} moves! "
+                f"Line: {self.board.winning_cells} ---"
             )
         else:
-            self.status_label.configure(text="¡Gana la IA MCTS!")
+            self.status_label.configure(text="MCTS AI wins!")
             self._append_log(
-                f"--- FIN: ¡Gana la IA MCTS en {self.board.moves_count} jugadas! "
-                f"Línea: {self.board.winning_cells} ---"
+                f"--- END: MCTS AI wins in {self.board.moves_count} moves! "
+                f"Line: {self.board.winning_cells} ---"
             )
         return True
 
@@ -449,9 +446,6 @@ class Connect4MCTSApp(ctk.CTk):
                     width=outline_w,
                 )
 
-    # =========================================================================
-    # PESTAÑA 2: LABORATORIO DE EXPERIMENTACIÓN AUTOMATIZADA Y GRÁFICAS
-    # =========================================================================
     def _build_lab_tab(self):
         self.tab_lab.grid_columnconfigure(0, weight=2)
         self.tab_lab.grid_columnconfigure(1, weight=5)
@@ -462,17 +456,17 @@ class Connect4MCTSApp(ctk.CTk):
 
         ctk.CTkLabel(
             ctrl,
-            text="Configuración del Experimento",
+            text="Experiment Setup",
             font=ctk.CTkFont(size=16, weight="bold"),
         ).pack(anchor="w", padx=16, pady=(14, 10))
 
-        ctk.CTkLabel(ctrl, text="Tipo de estudio:").pack(anchor="w", padx=16)
-        self.exp_mode_var = ctk.StringVar(value="Escalado de Simulaciones (N)")
+        ctk.CTkLabel(ctrl, text="Study type:").pack(anchor="w", padx=16)
+        self.exp_mode_var = ctk.StringVar(value="Simulation Scaling (N)")
         self.exp_mode_menu = ctk.CTkOptionMenu(
             ctrl,
             values=[
-                "Escalado de Simulaciones (N)",
-                "Duelo Directo (Config A vs Config B)",
+                "Simulation Scaling (N)",
+                "Head-to-Head Matchup (Config A vs Config B)",
             ],
             variable=self.exp_mode_var,
             command=self._toggle_exp_fields,
@@ -483,46 +477,46 @@ class Connect4MCTSApp(ctk.CTk):
         self.dynamic_exp_frame.pack(fill="x", padx=16)
 
         self.scaling_box = ctk.CTkFrame(self.dynamic_exp_frame, fg_color="transparent")
-        ctk.CTkLabel(self.scaling_box, text="Niveles de simulaciones (separados por coma):").pack(anchor="w")
+        ctk.CTkLabel(self.scaling_box, text="Simulation levels (comma-separated):").pack(anchor="w")
         self.sim_levels_entry = ctk.CTkEntry(self.scaling_box)
         self.sim_levels_entry.insert(0, "25, 100, 300, 700")
         self.sim_levels_entry.pack(fill="x", pady=(2, 8))
 
-        ctk.CTkLabel(self.scaling_box, text="Rival de referencia:").pack(anchor="w")
-        self.scaling_opp_var = ctk.StringVar(value="Agente Aleatorio (Random)")
+        ctk.CTkLabel(self.scaling_box, text="Reference opponent:").pack(anchor="w")
+        self.scaling_opp_var = ctk.StringVar(value="Random Agent")
         ctk.CTkOptionMenu(
             self.scaling_box,
-            values=["Agente Aleatorio (Random)", "MCTS Base (N=100, C=1.41)"],
+            values=["Random Agent", "Baseline MCTS (N=100, C=1.41)"],
             variable=self.scaling_opp_var,
         ).pack(fill="x", pady=(2, 8))
 
-        ctk.CTkLabel(self.scaling_box, text="Partidas por nivel:").pack(anchor="w")
+        ctk.CTkLabel(self.scaling_box, text="Games per level:").pack(anchor="w")
         self.games_per_level_entry = ctk.CTkEntry(self.scaling_box)
         self.games_per_level_entry.insert(0, "16")
         self.games_per_level_entry.pack(fill="x", pady=(2, 8))
 
         self.duel_box = ctk.CTkFrame(self.dynamic_exp_frame, fg_color="transparent")
-        ctk.CTkLabel(self.duel_box, text="Agente A — Simulaciones (N) y Constante C:").pack(anchor="w")
+        ctk.CTkLabel(self.duel_box, text="Agent A — Simulations (N) & Constant C:").pack(anchor="w")
         row_a = ctk.CTkFrame(self.duel_box, fg_color="transparent")
         row_a.pack(fill="x", pady=(2, 8))
-        self.a_sims_entry = ctk.CTkEntry(row_a, placeholder_text="N (ej. 500)")
+        self.a_sims_entry = ctk.CTkEntry(row_a, placeholder_text="N (e.g. 500)")
         self.a_sims_entry.insert(0, "500")
         self.a_sims_entry.pack(side="left", expand=True, fill="x", padx=(0, 4))
-        self.a_c_entry = ctk.CTkEntry(row_a, placeholder_text="C (ej. 1.41)")
+        self.a_c_entry = ctk.CTkEntry(row_a, placeholder_text="C (e.g. 1.41)")
         self.a_c_entry.insert(0, "1.41")
         self.a_c_entry.pack(side="left", expand=True, fill="x", padx=(4, 0))
 
-        ctk.CTkLabel(self.duel_box, text="Agente B — Simulaciones (N) y Constante C:").pack(anchor="w")
+        ctk.CTkLabel(self.duel_box, text="Agent B — Simulations (N) & Constant C:").pack(anchor="w")
         row_b = ctk.CTkFrame(self.duel_box, fg_color="transparent")
         row_b.pack(fill="x", pady=(2, 8))
-        self.b_sims_entry = ctk.CTkEntry(row_b, placeholder_text="N (ej. 100)")
+        self.b_sims_entry = ctk.CTkEntry(row_b, placeholder_text="N (e.g. 100)")
         self.b_sims_entry.insert(0, "100")
         self.b_sims_entry.pack(side="left", expand=True, fill="x", padx=(0, 4))
-        self.b_c_entry = ctk.CTkEntry(row_b, placeholder_text="C (ej. 1.41)")
+        self.b_c_entry = ctk.CTkEntry(row_b, placeholder_text="C (e.g. 1.41)")
         self.b_c_entry.insert(0, "1.41")
         self.b_c_entry.pack(side="left", expand=True, fill="x", padx=(4, 0))
 
-        ctk.CTkLabel(self.duel_box, text="Número total de partidas (par para alternar salida):").pack(anchor="w")
+        ctk.CTkLabel(self.duel_box, text="Total games (even number to alternate first turn):").pack(anchor="w")
         self.duel_games_entry = ctk.CTkEntry(self.duel_box)
         self.duel_games_entry.insert(0, "20")
         self.duel_games_entry.pack(fill="x", pady=(2, 8))
@@ -531,7 +525,7 @@ class Connect4MCTSApp(ctk.CTk):
 
         self.run_exp_btn = ctk.CTkButton(
             ctrl,
-            text="Ejecutar Experimento",
+            text="Run Experiment",
             height=38,
             font=ctk.CTkFont(size=14, weight="bold"),
             command=self._start_experiment,
@@ -542,12 +536,12 @@ class Connect4MCTSApp(ctk.CTk):
         self.exp_progress.set(0)
         self.exp_progress.pack(fill="x", padx=16, pady=(0, 6))
 
-        self.exp_status_label = ctk.CTkLabel(ctrl, text="Listo para lanzar pruebas.", text_color="#9aa5b4")
+        self.exp_status_label = ctk.CTkLabel(ctrl, text="Ready to run benchmarks.", text_color="#9aa5b4")
         self.exp_status_label.pack(anchor="w", padx=16, pady=(0, 10))
 
         self.export_btn = ctk.CTkButton(
             ctrl,
-            text="Exportar Gráfica PNG (results/)",
+            text="Export PNG Chart (results/)",
             fg_color="#2e7d32",
             hover_color="#1b5e20",
             state="disabled",
@@ -563,7 +557,7 @@ class Connect4MCTSApp(ctk.CTk):
 
         self.placeholder_label = ctk.CTkLabel(
             self.chart_panel,
-            text="Configura un experimento a la izquierda y pulsa 'Ejecutar Experimento'\npara generar las gráficas comparativas.",
+            text="Configure an experiment on the left and click 'Run Experiment'\nto generate comparative charts.",
             font=ctk.CTkFont(size=14),
             text_color="#9aa5b4",
         )
@@ -572,7 +566,7 @@ class Connect4MCTSApp(ctk.CTk):
     def _toggle_exp_fields(self, mode):
         self.scaling_box.pack_forget()
         self.duel_box.pack_forget()
-        if mode.startswith("Escalado"):
+        if mode.startswith("Simulation"):
             self.scaling_box.pack(fill="x")
         else:
             self.duel_box.pack(fill="x")
@@ -583,7 +577,7 @@ class Connect4MCTSApp(ctk.CTk):
 
         mode = self.exp_mode_var.get()
         try:
-            if mode.startswith("Escalado"):
+            if mode.startswith("Simulation"):
                 sim_list = [int(x.strip()) for x in self.sim_levels_entry.get().split(",") if x.strip()]
                 games_per_level = int(self.games_per_level_entry.get())
                 if not sim_list or any(s <= 0 for s in sim_list) or games_per_level <= 0:
@@ -591,7 +585,7 @@ class Connect4MCTSApp(ctk.CTk):
                 opp_choice = self.scaling_opp_var.get()
                 opp_cfg = (
                     {"type": "random"}
-                    if opp_choice.startswith("Agente")
+                    if opp_choice.startswith("Random")
                     else {"type": "mcts", "simulations": 100, "c": 1.414}
                 )
             else:
@@ -603,21 +597,21 @@ class Connect4MCTSApp(ctk.CTk):
                 if min(a_sims, b_sims, duel_games) <= 0 or min(a_c, b_c) < 0:
                     raise ValueError
         except ValueError:
-            self.exp_status_label.configure(text="Error: revisa que los números sean válidos.", text_color="#e74c3c")
+            self.exp_status_label.configure(text="Error: please enter valid numbers.", text_color="#e74c3c")
             return
 
         self.experiment_running = True
         self.run_exp_btn.configure(state="disabled")
         self.export_btn.configure(state="disabled")
         self.exp_progress.set(0)
-        self.exp_status_label.configure(text="Ejecutando simulaciones...", text_color="#3b8ed0")
+        self.exp_status_label.configure(text="Running simulations...", text_color="#3b8ed0")
 
         def progress_cb(pct):
             self.after(0, lambda: self.exp_progress.set(pct))
 
         def worker():
             t0 = time.perf_counter()
-            if mode.startswith("Escalado"):
+            if mode.startswith("Simulation"):
                 data = run_simulation_scaling(
                     sim_list=sim_list,
                     games_per_level=games_per_level,
@@ -639,9 +633,9 @@ class Connect4MCTSApp(ctk.CTk):
         self.experiment_running = False
         self.run_exp_btn.configure(state="normal")
         self.export_btn.configure(state="normal")
-        self.exp_status_label.configure(text=f"Completado en {elapsed} s", text_color="#2ecc71")
+        self.exp_status_label.configure(text=f"Completed in {elapsed} s", text_color="#2ecc71")
 
-        lines = [f"Rival: {opp_label}", "-" * 44, " Sims | Win%  | Draw% | Tiempo(ms) | Nodos"]
+        lines = [f"Opponent: {opp_label}", "-" * 44, " Sims | Win%  | Draw% | Time(ms)  | Nodes"]
         for row in data:
             lines.append(
                 f"{row['simulations']:>5} | {row['win_rate']:>4.1f}% | {row['draw_rate']:>4.1f}% | "
@@ -659,16 +653,16 @@ class Connect4MCTSApp(ctk.CTk):
 
         bars = ax1.bar(sims, win_rates, color="#2ecc71", width=0.45)
         ax1.set_ylim(0, 110)
-        ax1.set_ylabel("Victorias (%)")
-        ax1.set_title(f"Rendimiento MCTS según Simulaciones (vs {opp_label})")
+        ax1.set_ylabel("Win Rate (%)")
+        ax1.set_title(f"MCTS Performance by Simulation Count (vs {opp_label})")
         ax1.grid(axis="y", linestyle="--", alpha=0.4)
         for bar, val in zip(bars, win_rates):
             ax1.text(bar.get_x() + bar.get_width() / 2, val + 2, f"{val:.1f}%", ha="center", fontsize=9)
 
         ax2.plot(sims, times, marker="o", color="#3b8ed0", linewidth=2.2)
-        ax2.set_xlabel("Número de Simulaciones por Turno (N)")
-        ax2.set_ylabel("Tiempo Medio / Jugada (ms)")
-        ax2.set_title("Coste Temporal por Movimiento")
+        ax2.set_xlabel("Simulations per Turn (N)")
+        ax2.set_ylabel("Avg Time / Move (ms)")
+        ax2.set_title("Computation Time per Move")
         ax2.grid(True, linestyle="--", alpha=0.4)
         for x_idx, val in enumerate(times):
             ax2.annotate(f"{val:.1f} ms", (x_idx, val), textcoords="offset points", xytext=(0, 7), ha="center", fontsize=9)
@@ -680,19 +674,19 @@ class Connect4MCTSApp(ctk.CTk):
         self.experiment_running = False
         self.run_exp_btn.configure(state="normal")
         self.export_btn.configure(state="normal")
-        self.exp_status_label.configure(text=f"Duelo completado en {elapsed} s", text_color="#2ecc71")
+        self.exp_status_label.configure(text=f"Matchup completed in {elapsed} s", text_color="#2ecc71")
 
         lines = [
-            f"Agente A: {stats['agent_a_name']}",
-            f"Agente B: {stats['agent_b_name']}",
-            f"Partidas: {stats['games']} (duración media: {stats['avg_moves']} jugadas)",
+            f"Agent A: {stats['agent_a_name']}",
+            f"Agent B: {stats['agent_b_name']}",
+            f"Games: {stats['games']} (avg length: {stats['avg_moves']} moves)",
             "-" * 44,
-            f"Victorias A : {stats['a_wins']} ({stats['a_win_rate']}%)",
-            f"Victorias B : {stats['b_wins']} ({stats['b_win_rate']}%)",
-            f"Empates     : {stats['draws']} ({stats['draw_rate']}%)",
+            f"Wins A      : {stats['a_wins']} ({stats['a_win_rate']}%)",
+            f"Wins B      : {stats['b_wins']} ({stats['b_win_rate']}%)",
+            f"Draws       : {stats['draws']} ({stats['draw_rate']}%)",
             "-" * 44,
-            f"Tiempo medio A: {stats['a_avg_time_ms']} ms ({stats['a_avg_nodes']} nodos)",
-            f"Tiempo medio B: {stats['b_avg_time_ms']} ms ({stats['b_avg_nodes']} nodos)",
+            f"Avg time A  : {stats['a_avg_time_ms']} ms ({stats['a_avg_nodes']} nodes)",
+            f"Avg time B  : {stats['b_avg_time_ms']} ms ({stats['b_avg_nodes']} nodes)",
         ]
         self._set_exp_summary("\n".join(lines))
 
@@ -700,23 +694,23 @@ class Connect4MCTSApp(ctk.CTk):
         ax1 = fig.add_subplot(121)
         ax2 = fig.add_subplot(122)
 
-        categories = ["Agente A", "Empates", "Agente B"]
+        categories = ["Agent A", "Draws", "Agent B"]
         values = [stats["a_win_rate"], stats["draw_rate"], stats["b_win_rate"]]
         colors = ["#2ecc71", "#95a5a6", "#e67e22"]
 
         bars = ax1.bar(categories, values, color=colors, width=0.5)
         ax1.set_ylim(0, 110)
-        ax1.set_ylabel("Porcentaje de Partidas (%)")
-        ax1.set_title("Resultado del Enfrentamiento")
+        ax1.set_ylabel("Games (%)")
+        ax1.set_title("Matchup Results")
         ax1.grid(axis="y", linestyle="--", alpha=0.4)
         for bar, val in zip(bars, values):
             ax1.text(bar.get_x() + bar.get_width() / 2, val + 2, f"{val:.1f}%", ha="center", fontsize=9)
 
-        agents = ["Agente A", "Agente B"]
+        agents = ["Agent A", "Agent B"]
         avg_times = [stats["a_avg_time_ms"], stats["b_avg_time_ms"]]
         bars2 = ax2.bar(agents, avg_times, color=["#3b8ed0", "#9b59b6"], width=0.45)
-        ax2.set_ylabel("Tiempo Medio por Turno (ms)")
-        ax2.set_title("Tiempo de Respuesta")
+        ax2.set_ylabel("Avg Time per Turn (ms)")
+        ax2.set_title("Response Time")
         ax2.grid(axis="y", linestyle="--", alpha=0.4)
         for bar, val in zip(bars2, avg_times):
             ax2.text(bar.get_x() + bar.get_width() / 2, val + 1, f"{val:.1f} ms", ha="center", fontsize=9)
@@ -750,7 +744,7 @@ class Connect4MCTSApp(ctk.CTk):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filepath = os.path.join("results", f"mcts_experiment_{timestamp}.png")
         self.current_figure.savefig(filepath, dpi=200)
-        self.exp_status_label.configure(text=f"Guardada en {filepath}", text_color="#2ecc71")
+        self.exp_status_label.configure(text=f"Saved to {filepath}", text_color="#2ecc71")
 
 
 if __name__ == "__main__":
