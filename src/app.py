@@ -29,10 +29,9 @@ class Connect4MCTSApp(ctk.CTk):
         super().__init__()
 
         self.title("Connect 4 — Herramienta de Experimentación MCTS")
-        self.geometry("1220x780")
-        self.minsize(1100, 720)
+        self.geometry("1420x780")
+        self.minsize(1240, 720)
 
-        # Estado de la partida actual
         self.board = Connect4Board()
         self.human_player = Connect4Board.PLAYER_1
         self.ai_player = Connect4Board.PLAYER_2
@@ -40,13 +39,16 @@ class Connect4MCTSApp(ctk.CTk):
         self.hover_col = None
         self.last_metrics = None
 
-        # Referencias para la pestaña de experimentos
         self.experiment_running = False
         self.current_figure = None
         self.canvas_widget = None
 
         self._build_ui()
         self._draw_board()
+        self._append_log("=== PARTIDA INICIADA ===")
+        self._append_log(
+            f"Sale: Humano (Rojo) | Config inicial: N={self.sims_var.get()}, C={self.c_var.get():.2f}"
+        )
 
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
@@ -59,21 +61,22 @@ class Connect4MCTSApp(ctk.CTk):
         self._build_lab_tab()
 
     # =========================================================================
-    # PESTAÑA 1: TABLERO JUGABLE + VISUALIZACIÓN DE DECISIONES MCTS
+    # PESTAÑA 1: TABLERO + ÚLTIMO TURNO + LOGS RONDA A RONDA
     # =========================================================================
     def _build_play_tab(self):
         self.tab_play.grid_columnconfigure(0, weight=3)
         self.tab_play.grid_columnconfigure(1, weight=2)
+        self.tab_play.grid_columnconfigure(2, weight=2)
         self.tab_play.grid_rowconfigure(0, weight=1)
 
-        # Panel izquierdo: tablero y barra superior de evaluación por columna
+        # Columna 0: Tablero
         board_container = ctk.CTkFrame(self.tab_play)
         board_container.grid(row=0, column=0, sticky="nsew", padx=(8, 6), pady=8)
 
         self.status_label = ctk.CTkLabel(
             board_container,
             text="Tu turno (Fichas Rojas) — Haz clic en una columna",
-            font=ctk.CTkFont(size=18, weight="bold"),
+            font=ctk.CTkFont(size=17, weight="bold"),
         )
         self.status_label.pack(pady=(14, 6))
 
@@ -89,22 +92,21 @@ class Connect4MCTSApp(ctk.CTk):
         self.board_canvas.bind("<Leave>", self._on_canvas_leave)
         self.board_canvas.bind("<Button-1>", self._on_canvas_click)
 
-        # Panel derecho: parámetros MCTS y telemetría en vivo
+        # Columna 1: Controles y telemetría del último movimiento
         side_panel = ctk.CTkFrame(self.tab_play)
-        side_panel.grid(row=0, column=1, sticky="nsew", padx=(6, 8), pady=8)
+        side_panel.grid(row=0, column=1, sticky="nsew", padx=6, pady=8)
 
         ctk.CTkLabel(
             side_panel,
             text="Parámetros del Algoritmo",
-            font=ctk.CTkFont(size=16, weight="bold"),
-        ).pack(anchor="w", padx=16, pady=(14, 8))
+            font=ctk.CTkFont(size=15, weight="bold"),
+        ).pack(anchor="w", padx=14, pady=(14, 8))
 
-        # Control de número de simulaciones (N)
         self.sims_var = ctk.IntVar(value=500)
         self.sims_label = ctk.CTkLabel(
             side_panel, text=f"Simulaciones por turno (N): {self.sims_var.get()}"
         )
-        self.sims_label.pack(anchor="w", padx=16)
+        self.sims_label.pack(anchor="w", padx=14)
 
         self.sims_slider = ctk.CTkSlider(
             side_panel,
@@ -114,14 +116,13 @@ class Connect4MCTSApp(ctk.CTk):
             variable=self.sims_var,
             command=self._on_sims_change,
         )
-        self.sims_slider.pack(fill="x", padx=16, pady=(4, 12))
+        self.sims_slider.pack(fill="x", padx=14, pady=(4, 12))
 
-        # Control de constante de exploración UCB1 (C)
         self.c_var = ctk.DoubleVar(value=1.41)
         self.c_label = ctk.CTkLabel(
             side_panel, text=f"Constante de exploración UCB1 (C): {self.c_var.get():.2f}"
         )
-        self.c_label.pack(anchor="w", padx=16)
+        self.c_label.pack(anchor="w", padx=14)
 
         self.c_slider = ctk.CTkSlider(
             side_panel,
@@ -131,36 +132,67 @@ class Connect4MCTSApp(ctk.CTk):
             variable=self.c_var,
             command=self._on_c_change,
         )
-        self.c_slider.pack(fill="x", padx=16, pady=(4, 12))
+        self.c_slider.pack(fill="x", padx=14, pady=(4, 12))
 
-        # Selector de quién empieza
-        ctk.CTkLabel(side_panel, text="Orden de salida:").pack(anchor="w", padx=16)
+        ctk.CTkLabel(side_panel, text="Orden de salida:").pack(anchor="w", padx=14)
         self.starter_var = ctk.StringVar(value="Humano empieza (Rojo)")
         self.starter_menu = ctk.CTkOptionMenu(
             side_panel,
             values=["Humano empieza (Rojo)", "IA MCTS empieza (Amarillo)"],
             variable=self.starter_var,
         )
-        self.starter_menu.pack(fill="x", padx=16, pady=(4, 14))
+        self.starter_menu.pack(fill="x", padx=14, pady=(4, 14))
 
         ctk.CTkButton(
             side_panel,
             text="Iniciar Nueva Partida",
-            height=38,
-            font=ctk.CTkFont(size=14, weight="bold"),
+            height=36,
+            font=ctk.CTkFont(size=13, weight="bold"),
             command=self._reset_game,
-        ).pack(fill="x", padx=16, pady=(0, 16))
+        ).pack(fill="x", padx=14, pady=(0, 14))
 
-        # Caja de telemetría del último movimiento de la IA
         ctk.CTkLabel(
             side_panel,
             text="Análisis del Último Turno IA",
-            font=ctk.CTkFont(size=16, weight="bold"),
-        ).pack(anchor="w", padx=16, pady=(4, 6))
+            font=ctk.CTkFont(size=15, weight="bold"),
+        ).pack(anchor="w", padx=14, pady=(4, 6))
 
-        self.telemetry_box = ctk.CTkTextbox(side_panel, height=280, font=ctk.CTkFont(family="Consolas", size=12))
-        self.telemetry_box.pack(fill="both", expand=True, padx=16, pady=(0, 14))
-        self._set_telemetry_text("Aún no ha jugado la IA.\nHaz tu primer movimiento o inicia una partida con salida de la IA.")
+        self.telemetry_box = ctk.CTkTextbox(
+            side_panel, font=ctk.CTkFont(family="Consolas", size=11)
+        )
+        self.telemetry_box.pack(fill="both", expand=True, padx=14, pady=(0, 14))
+        self._set_telemetry_text(
+            "Aún no ha jugado la IA.\nHaz tu primer movimiento o inicia una partida con salida de la IA."
+        )
+
+        # Columna 2: Historial completo de rondas
+        logs_panel = ctk.CTkFrame(self.tab_play)
+        logs_panel.grid(row=0, column=2, sticky="nsew", padx=(6, 8), pady=8)
+
+        logs_header = ctk.CTkFrame(logs_panel, fg_color="transparent")
+        logs_header.pack(fill="x", padx=14, pady=(14, 6))
+
+        ctk.CTkLabel(
+            logs_header,
+            text="Logs por Ronda",
+            font=ctk.CTkFont(size=15, weight="bold"),
+        ).pack(side="left")
+
+        ctk.CTkButton(
+            logs_header,
+            text="Limpiar",
+            width=70,
+            height=26,
+            fg_color="#3a3f4b",
+            hover_color="#4c5261",
+            command=self._clear_logs,
+        ).pack(side="right")
+
+        self.logs_box = ctk.CTkTextbox(
+            logs_panel, font=ctk.CTkFont(family="Consolas", size=11), wrap="word"
+        )
+        self.logs_box.pack(fill="both", expand=True, padx=14, pady=(0, 14))
+        self.logs_box.configure(state="disabled")
 
     def _on_sims_change(self, val):
         self.sims_label.configure(text=f"Simulaciones por turno (N): {int(val)}")
@@ -174,6 +206,17 @@ class Connect4MCTSApp(ctk.CTk):
         self.telemetry_box.insert("1.0", text)
         self.telemetry_box.configure(state="disabled")
 
+    def _append_log(self, message):
+        self.logs_box.configure(state="normal")
+        self.logs_box.insert("end", message + "\n")
+        self.logs_box.see("end")
+        self.logs_box.configure(state="disabled")
+
+    def _clear_logs(self):
+        self.logs_box.configure(state="normal")
+        self.logs_box.delete("1.0", "end")
+        self.logs_box.configure(state="disabled")
+
     def _reset_game(self):
         if self.ai_thinking:
             return
@@ -181,15 +224,21 @@ class Connect4MCTSApp(ctk.CTk):
         self.last_metrics = None
         self.hover_col = None
 
+        sims = int(self.sims_var.get())
+        c_val = float(self.c_var.get())
+        self._append_log("\n=== NUEVA PARTIDA ===")
+
         if self.starter_var.get().startswith("Humano"):
             self.human_player = Connect4Board.PLAYER_1
             self.ai_player = Connect4Board.PLAYER_2
             self.status_label.configure(text="Tu turno (Fichas Rojas) — Haz clic en una columna")
             self._set_telemetry_text("Partida reiniciada. Te toca mover primero.")
+            self._append_log(f"Sale: Humano (Rojo) | Params: N={sims}, C={c_val:.2f}")
             self._draw_board()
         else:
             self.ai_player = Connect4Board.PLAYER_1
             self.human_player = Connect4Board.PLAYER_2
+            self._append_log(f"Sale: IA MCTS (Amarillo) | Params: N={sims}, C={c_val:.2f}")
             self._draw_board()
             self._trigger_ai_move()
 
@@ -227,6 +276,13 @@ class Connect4MCTSApp(ctk.CTk):
             return
 
         if self.board.make_move(col):
+            row, moved_col = self.board.last_move
+            round_num = (self.board.moves_count + 1) // 2
+            self._append_log(
+                f"[Ronda {round_num:02d} | Jugada {self.board.moves_count:02d}] "
+                f"Humano -> Col {moved_col} (Fila {row})"
+            )
+
             self.hover_col = None
             self._draw_board()
             if self._check_game_over():
@@ -254,6 +310,20 @@ class Connect4MCTSApp(ctk.CTk):
             self.board.make_move(col)
             self.last_metrics = metrics
             self._update_telemetry_panel(metrics)
+
+            row, moved_col = self.board.last_move
+            round_num = (self.board.moves_count + 1) // 2
+            col_info = metrics.get("column_stats", {}).get(moved_col, {})
+            win_rate = col_info.get("win_rate", 0.0)
+            visits = col_info.get("visits", 0)
+
+            self._append_log(
+                f"[Ronda {round_num:02d} | Jugada {self.board.moves_count:02d}] "
+                f"IA MCTS -> Col {moved_col} (Fila {row}) | "
+                f"Win: {win_rate:.1f}% ({visits}/{metrics['simulations']} vis) | "
+                f"{metrics['elapsed_time_ms']} ms (N={metrics['simulations']}, C={metrics['exploration_constant']})"
+            )
+
         self._draw_board()
         if not self._check_game_over():
             self.status_label.configure(text="Tu turno (Fichas Rojas) — Haz clic en una columna")
@@ -265,9 +335,9 @@ class Connect4MCTSApp(ctk.CTk):
             f"Simulaciones (N): {metrics['simulations']}",
             f"Constante C     : {metrics['exploration_constant']}",
             f"Nodos expandidos: {metrics['nodes_created']}",
-            "-" * 42,
+            "-" * 38,
             "Col | Visitas | % Victoria",
-            "-" * 42,
+            "-" * 38,
         ]
         col_stats = metrics.get("column_stats", {})
         for c in range(Connect4Board.COLS):
@@ -285,10 +355,19 @@ class Connect4MCTSApp(ctk.CTk):
             return False
         if self.board.winner == 0:
             self.status_label.configure(text="¡Empate! Tablero completo sin 4 en raya.")
+            self._append_log(f"--- FIN: Empate tras {self.board.moves_count} jugadas ---")
         elif self.board.winner == self.human_player:
             self.status_label.configure(text="¡Has ganado a la IA!")
+            self._append_log(
+                f"--- FIN: ¡Gana el Humano en {self.board.moves_count} jugadas! "
+                f"Línea: {self.board.winning_cells} ---"
+            )
         else:
             self.status_label.configure(text="¡Gana la IA MCTS!")
+            self._append_log(
+                f"--- FIN: ¡Gana la IA MCTS en {self.board.moves_count} jugadas! "
+                f"Línea: {self.board.winning_cells} ---"
+            )
         return True
 
     def _draw_board(self):
@@ -300,7 +379,6 @@ class Connect4MCTSApp(ctk.CTk):
         cell_size = 80
         radius = 31
 
-        # 1. Zona superior: barras con la valoración MCTS del último turno por columna
         col_stats = self.last_metrics["column_stats"] if self.last_metrics else {}
         best_col = self.last_metrics["best_move"] if self.last_metrics else None
 
@@ -320,7 +398,6 @@ class Connect4MCTSApp(ctk.CTk):
                     cx, 84, text=f"{wr:.0f}%", fill="#e6edf3", font=("Segoe UI", 9, "bold")
                 )
 
-            # Ficha fantasma al pasar el ratón en turno del humano
             if (
                 self.hover_col == col
                 and not self.ai_thinking
@@ -333,7 +410,6 @@ class Connect4MCTSApp(ctk.CTk):
                     cx - 16, 42, cx + 16, 74, fill=ghost_color, outline="#ffffff", width=1
                 )
 
-        # 2. Marco azul clásico del tablero
         board_w = Connect4Board.COLS * cell_size
         board_h = Connect4Board.ROWS * cell_size
         c.create_rectangle(
@@ -346,7 +422,6 @@ class Connect4MCTSApp(ctk.CTk):
             width=3,
         )
 
-        # 3. Huecos y fichas
         win_set = set(self.board.winning_cells)
         for row in range(Connect4Board.ROWS):
             for col in range(Connect4Board.COLS):
@@ -357,9 +432,9 @@ class Connect4MCTSApp(ctk.CTk):
                 if val == Connect4Board.EMPTY:
                     fill_color = "#13171e"
                 elif val == Connect4Board.PLAYER_1:
-                    fill_color = "#e74c3c"  # Rojo
+                    fill_color = "#e74c3c"
                 else:
-                    fill_color = "#f1c40f"  # Amarillo
+                    fill_color = "#f1c40f"
 
                 outline_color = "#2ecc71" if (row, col) in win_set else "#0d1117"
                 outline_w = 4 if (row, col) in win_set else 2
@@ -382,7 +457,6 @@ class Connect4MCTSApp(ctk.CTk):
         self.tab_lab.grid_columnconfigure(1, weight=5)
         self.tab_lab.grid_rowconfigure(0, weight=1)
 
-        # Panel izquierdo: configuración de experimentos
         ctrl = ctk.CTkFrame(self.tab_lab)
         ctrl.grid(row=0, column=0, sticky="nsew", padx=(8, 6), pady=8)
 
@@ -405,11 +479,9 @@ class Connect4MCTSApp(ctk.CTk):
         )
         self.exp_mode_menu.pack(fill="x", padx=16, pady=(4, 12))
 
-        # Frame dinámico según el tipo de experimento
         self.dynamic_exp_frame = ctk.CTkFrame(ctrl, fg_color="transparent")
         self.dynamic_exp_frame.pack(fill="x", padx=16)
 
-        # Widgets para Modo 1 (Escalado)
         self.scaling_box = ctk.CTkFrame(self.dynamic_exp_frame, fg_color="transparent")
         ctk.CTkLabel(self.scaling_box, text="Niveles de simulaciones (separados por coma):").pack(anchor="w")
         self.sim_levels_entry = ctk.CTkEntry(self.scaling_box)
@@ -429,7 +501,6 @@ class Connect4MCTSApp(ctk.CTk):
         self.games_per_level_entry.insert(0, "16")
         self.games_per_level_entry.pack(fill="x", pady=(2, 8))
 
-        # Widgets para Modo 2 (Duelo directo)
         self.duel_box = ctk.CTkFrame(self.dynamic_exp_frame, fg_color="transparent")
         ctk.CTkLabel(self.duel_box, text="Agente A — Simulaciones (N) y Constante C:").pack(anchor="w")
         row_a = ctk.CTkFrame(self.duel_box, fg_color="transparent")
@@ -487,7 +558,6 @@ class Connect4MCTSApp(ctk.CTk):
         self.exp_summary_box = ctk.CTkTextbox(ctrl, height=180, font=ctk.CTkFont(family="Consolas", size=12))
         self.exp_summary_box.pack(fill="both", expand=True, padx=16, pady=(0, 14))
 
-        # Panel derecho: lienzo de Matplotlib
         self.chart_panel = ctk.CTkFrame(self.tab_lab)
         self.chart_panel.grid(row=0, column=1, sticky="nsew", padx=(6, 8), pady=8)
 
@@ -571,7 +641,6 @@ class Connect4MCTSApp(ctk.CTk):
         self.export_btn.configure(state="normal")
         self.exp_status_label.configure(text=f"Completado en {elapsed} s", text_color="#2ecc71")
 
-        # Resumen numérico
         lines = [f"Rival: {opp_label}", "-" * 44, " Sims | Win%  | Draw% | Tiempo(ms) | Nodos"]
         for row in data:
             lines.append(
@@ -580,7 +649,6 @@ class Connect4MCTSApp(ctk.CTk):
             )
         self._set_exp_summary("\n".join(lines))
 
-        # Gráfica doble: eficacia vs coste computacional
         fig = Figure(figsize=(7.5, 5.6), dpi=100)
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
