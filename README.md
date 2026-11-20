@@ -23,5 +23,4 @@ Visual experimentation tool built in Python to analyze the behavior, convergence
    pip install -r requirements.txt
 
 2. Launch the application:
-    Bash
-    python main.py
+    ```python main.py
